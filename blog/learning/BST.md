@@ -67,7 +67,11 @@
 
 然后看情况可能需要执行操作，也可能执行完退出（如，可重集对应出现次数 $>1$ 时，只需要把出现次数 $-1$ 并退出即可）。
 
-如果没有退出，则把 $g$ 旋转到叶子结点（具体来讲，每次选择一个可用子节点进行旋转，每次深度会增加 $1$），然后直接删除即可。
+如果没有退出，就有两种删除方法：
+
+第一种：把 $g$ 旋转到叶子结点（具体来讲，每次选择一个可用子节点进行旋转，每次深度会增加 $1$），然后直接删除即可。
+
+第二种：如果 $g$ 是叶子结点则直接删除。否则如果 $g$ 有一个子节点，那么那 $g$ 的子树替代自身即可（正确性自证不难），如果有两个则用其左子树中的最大节点或其右子树中的最小节点代替之即可。注意“代替”是指先用自己的信息覆盖 $g$，然后删除自身。这里删除也需要递归地用这种方法删除。
 
 ### 查询元素排名
 
@@ -108,7 +112,9 @@
 >
 > 补充证明：为什么删除元素时间复杂度也是 $\mathcal O(h)$？
 >
-> 因为每次旋转之后要删除的元素都会下沉 $1$ 个节点（深度增加 $1$），最多会进行 $h-1$ 次旋转，每次旋转是 $\Theta(1)$ 的。
+> 第一种方法：因为每次旋转之后要删除的元素都会下沉 $1$ 个节点（深度增加 $1$），最多会进行 $h-1$ 次旋转，每次旋转是 $\Theta(1)$ 的。
+>
+> 第二种方法：每次深度最少 $+1$，并且每次查找最大/最小值花费的时间与深度的增量成正比。
 >
 
 所以说二叉搜索树的“平衡性”是一个问题，如果二叉树非常“瘦长”（比如极端情况退化成链），则时间复杂度也会退化（如链就是 $\mathcal O(n)$，相当于朴素算法，常数还更大）。
@@ -123,8 +129,308 @@
 
 ## 代码实现
 
+这是使用旋转实现删除的方法。这个代码能够在[洛谷 P3369 【模版】普通平衡树](https://www.luogu.com.cn/problem/P3369) 中获得 $91$ 分的好成绩。最后一个点卡普通 BST。
+
 ```cpp
+#include <cstdio>
+#include <cstdlib>
+
+using namespace std;
+
+class bst_node
+{
+public:
+	int num, cnt, sz;
+	bst_node* fa, * l, * r;
+	void calcsz()
+	{
+		sz = cnt;
+		if (l) sz += l->sz;
+		if (r) sz += r->sz;
+	}
+	bool checksz() { return cnt >= 1 && sz == cnt + (l ? l->sz : 0) + (r ? r->sz : 0); }
+	// 旋转。效果：维持二叉搜索树性质。同时把自己的节点高度提升 1，父节点高度降低 1。
+	bool rotate()
+	{
+		if (!fa) return false; // 是根节点，旋转个毛（├┼┼┘：？我：？？？）
+		if (this == fa->l)
+		{
+			// 进行右旋。
+			// 思考：什么指针不变？
+			// 答案：自己的左子树不变，父节点的右子树不变。
+			// 什么东西变了？
+			// 自己的右子节点变成了父节点，父节点的父节点变成了自己。
+			// 同时父节点的左子结点变成了自己的右子树。
+			auto f = fa, ff = f->fa;
+			fa->l = r; if (r) r->fa = fa;
+			r = fa; fa->fa = this;
+			fa = ff;
+			if (ff)
+			{
+				if (ff->r == f) ff->r = this;
+				else ff->l = this;
+			}
+		}
+		else
+		{
+			// 同理。
+			auto f = fa, ff = f->fa;
+			fa->r = l; if (l) l->fa = fa;
+			l = fa; fa->fa = this;
+			fa = ff;
+			if (ff)
+			{
+				if (ff->r == f) ff->r = this;
+				else ff->l = this;
+			}
+		}
+		// 最后维护一下 sz。cnt 和 num 是节点自己的数据，不需要变化。
+		if (l) l->calcsz();
+		if (r) r->calcsz();
+		calcsz();
+		return true;
+	}
+	// 对左子结点旋转。自身高度降低 1。
+	bool rotate_l() { if (!l) return false; return l->rotate(); }
+	// 对右子节点旋转。自身高度降低 1。
+	bool rotate_r() { if (!r) return false; return r->rotate(); }
+	// 自身高度降低 1。
+	bool dec_height() { return rotate_l() || rotate_r(); }
+};
+
+class bst
+{
+	bst_node* rt = nullptr;
+public:
+	bst() {}
+	bst_node* search(int x)
+	{
+		// Search x in the BST
+		bst_node* k = rt;
+		while (k)
+		{
+			if (x == k->num) return k;
+			else if (x < k->num) k = k->l;
+			else k = k->r;
+		}
+		return nullptr; // Not found
+	}
+	bst_node* qmax(bst_node* rt)
+	{
+		while (rt)
+		{
+			if (rt->r) rt = rt->r;
+			else return rt;
+		}
+		return rt;
+	}
+	bst_node* qmax() { return qmax(rt); }
+	bst_node* qmin(bst_node* rt)
+	{
+		while (rt)
+		{
+			if (rt->l) rt = rt->l;
+			else return rt;
+		}
+		return rt;
+	}
+	bst_node* qmin() { return qmin(rt); }
+	bst_node* prev(int x, bst_node* k)
+	{
+		if (k == nullptr) return nullptr;
+		if (x == k->num) return qmax(k->l);
+		else if (x < k->num) return prev(x, k->l);
+		else
+		{
+			bst_node* res = prev(x, k->r);
+			return res ? res : k;
+		}
+	}
+	bst_node* prev(int x) { return prev(x, rt); }
+	bst_node* next(int x, bst_node* k)
+	{
+		if (k == nullptr) return nullptr;
+		if (x == k->num) return qmin(k->r);
+		else if (x > k->num) return next(x, k->r);
+		else
+		{
+			bst_node* res = next(x, k->l);
+			return res ? res : k;
+		}
+	}
+	bst_node* next(int x) { return next(x, rt); }
+	bst_node* insert(int x)
+	{
+		if (rt == nullptr) return rt = new bst_node{ x, 1, 1, nullptr, nullptr, nullptr };
+		bst_node* k = rt;
+		while (k)
+		{
+			if (x == k->num)
+			{
+				k->cnt++;
+				auto res = k;
+				while (k)
+				{
+					k->sz++;
+					k = k->fa;
+				}
+				return res;
+			}
+			else if (x < k->num)
+			{
+				if (k->l) k = k->l;
+				else
+				{
+					bst_node* res;
+					k->l = res = new bst_node{ x, 1, 1, k, nullptr, nullptr };
+					while (k)
+					{
+						k->sz++;
+						k = k->fa;
+					}
+					return res;
+				}
+			}
+			else
+			{
+				if (k->r) k = k->r;
+				else
+				{
+					bst_node* res;
+					k->r = res = new bst_node{ x, 1, 1, k, nullptr, nullptr };
+					while (k)
+					{
+						k->sz++;
+						k = k->fa;
+					}
+					return res;
+				}
+			}
+		}
+	}
+	void remove_one(bst_node* x)
+	{
+		if (x->cnt > 1)
+		{
+			x->cnt--;
+			while (x)
+			{
+				x->sz--;
+				x = x->fa;
+			}
+			return;
+		}
+		if (x->l == nullptr && x->r == nullptr)
+		{
+			if (rt == x)
+			{
+				rt = nullptr;
+				delete x;
+			}
+			else
+			{
+				auto y = x->fa;
+				if (x == y->l) y->l = nullptr;
+				else y->r = nullptr;
+				delete x;
+				x = y;
+				while (x)
+				{
+					x->sz--;
+					x = x->fa;
+				}
+			}
+			return;
+		}
+		while (x->dec_height()); // 哇这么好写
+		if (x == x->fa->l) x->fa->l = nullptr;
+		else x->fa->r = nullptr;
+		while (x)
+		{
+			x->sz--;
+			x = x->fa;
+		}
+		delete x;
+		while (rt->fa) rt = rt->fa;
+	}
+	void remove_one(int x) { remove_one(search(x)); }
+	int getrank(int x)
+	{
+		int rk = 1;
+		bst_node* g = rt;
+		while (g)
+		{
+			if (x < g->num) g = g->l;
+			else if (x == g->num) return rk + (g->l ? g->l->sz : 0);
+			else
+			{
+				rk += g->cnt + (g->l ? g->l->sz : 0);
+				g = g->r;
+			}
+		}
+		return rk;
+	}
+	bst_node* kth(int rk)
+	{
+		bst_node* g = rt;
+		while (g)
+		{
+			if (!g->l && !g->r) return g;
+			else if (rk >= (g->l ? g->l->sz : 0) + 1 && rk <= (g->l ? g->l->sz : 0) + g->cnt) return g;
+			else if (g->l && !g->r) g = g->l;
+			else if (!g->l && g->r)
+			{
+				rk -= g->cnt;
+				g = g->r;
+			}
+			else if (rk <= g->l->sz) g = g->l;
+			else
+			{
+				rk -= g->l->sz + g->cnt;
+				g = g->r;
+			}
+		}
+		return g;
+	}
+	// 还算有用的两个函数，可以看看你有没有写挂。
+	// cheque 和 check 谐音。
+	bool cheque(bst_node* rt)
+	{
+		if (!rt->checksz()) return false;
+		if (rt->l && (rt->l->fa != rt || rt->l->num >= rt->num)) return false;
+		if (rt->r && (rt->r->fa != rt || rt->r->num <= rt->num)) return false;
+		if (rt->l && !cheque(rt->l)) return false;
+		if (rt->r && !cheque(rt->r)) return false;
+		return true;
+	}
+	bool check() { return rt->fa == nullptr && cheque(rt); }
+};
+
+int main()
+{
+	int n;
+	scanf("%d", &n);
+	bst k;
+	int cnt = 0;
+	for (int i = 1; i <= n; i++)
+	{
+		int opt, x;
+		scanf("%d%d", &opt, &x);
+		switch (opt)
+		{
+		case 1: k.insert(x); break;
+		case 2: k.remove_one(x); break;
+		case 3: printf("%d\n", k.getrank(x)); cnt++; break;
+		case 4: printf("%d\n", k.kth(x)->num); cnt++; break;
+		case 5: printf("%d\n", k.prev(x)->num); cnt++; break;
+		case 6: printf("%d\n", k.next(x)->num); cnt++; break;
+		}
+	}
+	return 0;
+}
 ```
+
+如果是递归删除则需要把 `remove_one(bst_node *)` 代码改为：
 
 ## 彩蛋
 
