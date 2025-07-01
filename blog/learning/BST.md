@@ -430,7 +430,98 @@ int main()
 }
 ```
 
-如果是递归删除则需要把 `remove_one(bst_node *)` 代码改为：
+如果是递归删除，则首先增加一个 `remove_all` 函数：
+
+```cpp
+void remove_all(bst_node* x)
+{
+	if (x->l == nullptr && x->r == nullptr)
+	{
+		if (rt == x)
+		{
+			rt = nullptr;
+			delete x;
+		}
+		else
+		{
+			auto y = x->fa;
+			if (x == y->l) y->l = nullptr;
+			else y->r = nullptr;
+			delete x;
+			x = y;
+			while (x)
+			{
+				x->calcsz();
+				x = x->fa;
+			}
+		}
+		return;
+	}
+	if (x->l == nullptr || x->r == nullptr)
+	{
+		if (x->fa)
+		{
+			if (x->l != nullptr)
+			{
+				if (x->fa->l == x) x->fa->l = x->l;
+				else x->fa->r = x->l;
+				x->l->fa = x->fa;
+			}
+			else
+			{
+				if (x->fa->l == x) x->fa->l = x->r;
+				else x->fa->r = x->r;
+				x->r->fa = x->fa;
+			}
+		}
+		else
+		{
+			if (x->l)
+			{
+				rt = x->l;
+				x->l->fa = nullptr;
+			}
+			else
+			{
+				rt = x->r;
+				x->r->fa = nullptr;
+			}
+		}
+		while (x)
+		{
+			x->calcsz();
+			x = x->fa;
+		}
+		delete x;
+		return;
+	}
+	bst_node* k = qmax(x->l);
+	x->num = k->num;
+	x->cnt = k->cnt;
+	remove_all(k);
+}
+```
+
+然后需要把 `remove_one(bst_node *)` 代码改为：
+
+```cpp
+void remove_one(bst_node* x)
+{
+	if (x->cnt > 1)
+	{
+		x->cnt--;
+		while (x)
+		{
+			x->calcsz();
+			x = x->fa;
+		}
+		return;
+	}
+	remove_all(x);
+}
+```
+
+可以获得同样的分数。
 
 ## 彩蛋
 
