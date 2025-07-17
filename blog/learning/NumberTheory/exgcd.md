@@ -86,11 +86,7 @@ int exgcd(int a, int b, int &x, int &y)
 
 因为解有无穷多个（或没有，假设有解），我们有必要分析 exgcd 返回的解满足什么性质。
 
-采用数学归纳法可以证明，exgcd 返回的解必然满足 $\lvert x \rvert \le b, \lvert y \rvert \le a$（$b \neq 0$）。进一步地，会满足 $\lvert x \rvert \le \frac{b}{2}, \lvert y \rvert \le a$ 或者 $\lvert x \rvert \le b, \lvert y \rvert \le \frac{a}{2}$。
-
-证明：首先 $b\mid a$ 时满足条件。那么我们假设 $\lvert x_1 \rvert \le \frac{a\bmod b}{2}, \lvert y_1 \rvert \le b$，稍微推推式子就可以得到 $\lvert x_0 \rvert \le b, \lvert y_0 \rvert \le \frac{a}{2}$。
-
-> TODO：证明 exgcd 返回的是绝对值之和最小的解。
+我们可以证明，exgcd 算法返回的解必然是绝对值之和最小的，并且必然满足 $\lvert x\rvert \le b,\lvert y \rvert \le a$。网上已经有关于此的证明，这里不多讲。
 
 ## 例题
 
@@ -100,7 +96,7 @@ int exgcd(int a, int b, int &x, int &y)
 
 题目大意：给定 $A,B$，求 $Ax+By=(A,B)$ 的所有整数解中 $\lvert x\rvert+\lvert y\rvert$ 最小的整数解。
 
-
+根据 exgcd 的性质我们直接使用 exgcd 返回解即可。
 
 ### 洛谷 P5656【模版】二元一次不定方程 (exgcd)
 
@@ -109,3 +105,78 @@ int exgcd(int a, int b, int &x, int &y)
 首先根据裴蜀定理判断是否无解。
 
 然后约掉 $(a,b)$，根据其通解形式求出 $x>0$ 时的 $k$ 的最大值和让 $y>0$ 时 $k$ 的最小值。根据这个范围判断有没有正整数解，如果有，则首先个数很好求，然后 $x,y$ 最小值就分别是当 $k$ 取最大和最小时的情况，然后也分别是 $y,x$ 取最大值的情况。如果没有正整数解，那么还是可以求 $x,y$ 最小值。
+
+恶心的是要自己写向下/上取整的除法（C++ `/` 运算符的是向零取整，负数是向上取整，正数是向下）。
+
+注意解可能爆 `int`，因为虽然 exgcd 求出的解不会，但是最终要乘上 $c$。
+
+```cpp
+#include <cstdio>
+
+using namespace std;
+
+long long exgcd(long long a, long long b, long long& x, long long& y)
+{
+    if (b == 0)
+    {
+        x = 1;
+        y = 0;
+        return a;
+    }
+    long long res = exgcd(b, a % b, y, x);
+    y -= a / b * x;
+    return res;
+}
+
+long long lowdiv(long long a, long long b)
+{
+    if (a == 0) return 0;
+    if ((a > 0) ^ (b > 0)) return a > 0 ? -((a - b - 1) / (-b)) : -((-a+b-1)/b);
+    else return a / b;
+}
+
+long long uppdiv(long long a, long long b)
+{
+    if (a == 0) return 0;
+    if ((a > 0) ^ (b > 0)) return a / b;
+    else return a > 0 ? (a + b - 1) / b : (-a - b - 1) / (-b);
+}
+
+void solve(long long a, long long b, long long c)
+{
+    long long x, y;
+    long long gcd = exgcd(a, b, x, y);
+    if (c % gcd) // 裴蜀定理判断无解
+    {
+        printf("-1\n");
+        return;
+    }
+    b /= gcd; a /= gcd; c /= gcd;
+    exgcd(a, b, x, y);
+    x *= c; y *= c;
+    // 求 x 为正整数时 k 的最大值，(x-kb, y+ka)
+    // x-kb >= 1: k <= (x-1)/b
+    long long kmax = lowdiv(x - 1, b);
+    // y+ka >= 1: k >= (1-y)/a
+    long long kmin = uppdiv(1 - y, a);
+    if (kmin > kmax) printf("%lld %lld\n", x - kmax * b, y + kmin * a);
+    else printf("%lld %lld %lld %lld %lld\n", kmax - kmin + 1, x - kmax * b, y + kmin * a, x - kmin * b, y + kmax * a);
+}
+
+int main()
+{
+    int t;
+    scanf("%d", &t);
+    while (t--)
+    {
+        int a, b, c;
+        scanf("%d%d%d", &a, &b, &c);
+        solve(a, b, c);
+    }
+    return 0;
+}
+```
+
+## Fun
+
+![来源：https://www.luogu.com.cn/article/261brvvn。侵删](../../../images/handsome-while-studing-nt.png)
