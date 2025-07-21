@@ -1,4 +1,4 @@
-# 浅谈中国剩余定理（Chinese Remainder Theorem，CRT）
+# 浅谈中国剩余定理（Chinese Remainder Theorem，CRT）/ 扩展中国剩余定理 exCRT
 
 问题描述：
 
@@ -26,25 +26,39 @@ $$ \begin{cases}x\equiv a_1\pmod{m_1}\\x\equiv a_2\pmod{m_2}\\x\equiv a_3\pmod{m
 
 > 给出一个无解的构造：$\begin{cases}x\equiv 1\pmod 2\\x\equiv 2\pmod 4\end{cases}$，第一条说明 $x$ 是奇数而第二条说明 $x$ 是偶数。所以存在无解的情况。
 
-## 简化问题
+## 思路 $1$ / CRT 算法
 
-重点探究 $n=2$ 如何解，即给出 $\begin{cases}x\equiv a\pmod u\\x\equiv b\pmod v\end{cases}$，求 $c$ 使得方程等价于 $x\equiv c\pmod{uv}$（$u\perp v$）。
+### 简化问题
 
-第一条相当于 $x=ku+a$，代入第二条得 $ku+a\equiv b\pmod v$（求 $k$），也就是 $ku\equiv b-a\pmod v$。我们令 $c=(b-a)\bmod v$。
+考虑 $a_i=1$，而其它都为 $0$ 的情况。
 
-现在问题就相当于给定 $ku\equiv c\pmod v$，求 $k$ 满足的条件。
+将所有 $a_j=0$ 的项合并，最后只剩两项。化为经典形式，exgcd 秒了。
 
-那么我们可以使用 exgcd（扩展欧几里得算法）解决这个问题。exgcd 可以看我其它的文章。
+### 回到问题
 
-## 回到问题
+对所有 $i$ 求出这种情况下的结果。
+
+而把第 $i$ 个结果乘 $a_i$，最后相加（省略了取模）即可。
+
+证明是显然的，因为是线性的。
+
+[模版题](https://www.luogu.com.cn/problem/P1495)。
+
+代码待补。
+
+## 思路 $2$ / exCRT 算法
+
+以上算法只能够处理所有 $m$ 互质的情况。
+
+### 简化问题
+
+$n=2$ 如何解。还是简单的，exgcd 秒了。
+
+### 回到问题
 
 核心思想是，一次一次合并条件。
 
 首先合并前两项，然后合并第一次合并完的结果和第三项，这样下去，直到只有一次为止。
-
-这就是中国剩余定理（Chinese Remainder Theorem，CRT）。
-
-什么你问拓展中国剩余定理（extended-CRT，exCRT）是什么？我也不知道。我在自学 CRT 的时候意外发现我对 CRT 的推导（所有 $m$ 互质）似乎完全适用于 exCRT（因为唯一用到 $m$ 互质的条件的地方就是算最小公倍数时直接算乘积，改了这个），后面忘了。
 
 [模版题](https://www.luogu.com.cn/problem/P1495)和[模版题](https://www.luogu.com.cn/problem/P4777)。参考代码：
 
