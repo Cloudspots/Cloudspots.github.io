@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>定位</title>
+</head>
+<body>
+<div>
+    <p>你的经度：<span id="lat">不知道</span>，纬度：<span id="lon">不知道</span>，海拔约为 <span id="alt">?</span> 米。</p>
+    <p>速度：<span id="spd"></span> m/s，方向：<span id="heading"></span>，位置精确到 <span id="ac"></span> m。</p>
+    <p id='sw'></p>
+</div>
+<script>
+    async function getAddress(lat, lon) {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
+  
+  try {
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'GeoTest/1.0 (123456789@qq.com)' } // 必须设置上你的邮箱！
+    });
+    const data = await response.json();
+    console.log(data);
+    return data.display_name; // 完整地址字符串，对象中还有更多信息。
+  } catch (error) {
+    console.error("Geocoding error:", error); // 出错了！
+    return null;
+  }
+};
+    addEventListener('load', ev => {
+        const lat = document.getElementById('lat');
+        const lon = document.getElementById('lon');
+        const alt = document.getElementById('alt');
+        const spd = document.getElementById('spd');
+        const hd = document.getElementById('heading');
+        const ac = document.getElementById('ac');
+        const sw = document.getElementById('sw');
+        if (navigator.geolocation) {
+navigator.geolocation.getCurrentPosition(cord=>{
+    lat.innerHTML = cord.coords.latitude;    // 经度
+    lon.innerHTML = cord.coords.longitude;   // 纬度
+    alt.innerHTML = cord.coords.altitude;    // 海拔
+    spd.innerHTML = cord.coords.speed;       // 速度
+    hd.innerHTML = cord.coords.heading;      // 方向
+    ac.innerHTML = cord.coords.accuracy;     // 精度
+    getAddress(cord.coords.latitude, cord.coords.longitude).then(address => {
+  sw.innerText = address; 
+});
+},console.log, {enableHighAccuracy:true, timeout:100000});
+        }
+    })
+</script>
+<p>注：此页面源码来自<a href="https://www.luogu.com.cn/article/8w3vvjtc">https://www.luogu.com.cn/article/8w3vvjtc</a>。<br/></p>
+</body>
+</html>
