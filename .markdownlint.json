@@ -4,5 +4,6 @@
         "code_blocks": false,
         "spaces_per_tab": 4
     },
+    "MD018": false,    "// 1" : "和洛谷一样把代码中 # 识别为标题行，糖丸了！！",
     "MD013": false
 }
